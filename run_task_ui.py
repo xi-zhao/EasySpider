@@ -5,8 +5,10 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import json
 
+# ...existing code...
 # 任务目录
-TASK_DIR = os.path.join(os.path.dirname(__file__), 'ElectronJS', 'execution_instances')
+TASK_DIR = os.path.join(os.path.dirname(__file__), 'execution_instances')
+# ...existing code...
 
 # Windows下EasySpider主目录
 WORK_DIR = r'D:\Program Files\EasySpider_Windows_x64'
@@ -71,35 +73,38 @@ def run_task(task_file, log_widget, btn):
     log_widget.delete(1.0, tk.END)
     # 提取 id
     task_id = os.path.splitext(task_file)[0]
-    # 拼接命令
+    # 构造 exe 路径和参数列表
+    exe_path = os.path.join(WORK_DIR, r'EasySpider\resources\app\chrome_win64\easyspider_executestage.exe')
+    exe_path = exe_path.replace('/', '\\')
     cmd = [
-        EXE_PATH,
+        exe_path,
         '--ids', f'[{task_id}]',
         '--user_data', '1',
         '--server_address', 'http://localhost:8074',
-        '--config_folder', WORK_DIR,
+        '--config_folder', WORK_DIR + '\\',
         '--headless', '0',
         '--read_type', 'local',
         '--config_file_name', 'config.json',
-        '--saved_file_name',
+        '--saved_file_name',  # 无参 flag
         '--keyboard', '0'
     ]
-    process = subprocess.Popen(
-        cmd,
-        cwd=WORK_DIR,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        shell=True
-    )
-    def read_log():
-        for line in process.stdout:
-            log_widget.insert(tk.END, line)
-            log_widget.see(tk.END)
-        process.wait()
-        btn.config(state=tk.NORMAL)
-        messagebox.showinfo("完成", "任务执行完成！")
-    threading.Thread(target=read_log, daemon=True).start()
+    print('CMD参数：', cmd)
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=WORK_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        print('STDOUT:', result.stdout)
+        print('STDERR:', result.stderr)
+        log_widget.insert(tk.END, result.stdout)
+        log_widget.see(tk.END)
+        messagebox.showinfo('完成', '任务执行完成！')
+    except Exception as e:
+        log_widget.insert(tk.END, f'执行出错: {e}\n')
+    btn.config(state=tk.NORMAL)
 
 def on_task_select(event, label_widget, links_widget, combo):
     task_file = combo.get()
@@ -107,7 +112,7 @@ def on_task_select(event, label_widget, links_widget, combo):
 
 def main():
     root = tk.Tk()
-    root.title("EasySpider 任务执行器（Windows专用）")
+    root.title("标讯助手")
     root.geometry("800x600")
 
     tk.Label(root, text="选择任务文件：", font=("Arial", 12)).pack(pady=10)
